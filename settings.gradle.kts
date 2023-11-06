@@ -2,6 +2,7 @@ rootProject.name = "tcp-server-client"
 
 include("tcp-client")
 
+include("tcp-server-blocked-demo")
 include("tcp-server")
 include("tcp-server-demo")
 

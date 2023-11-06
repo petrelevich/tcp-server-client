@@ -14,7 +14,7 @@ public class TcpServerDemo {
     }
 
     private void run() {
-        var server = new Server(8080);
+        var server = new Server(8081);
 
         try (var executor = Executors.newFixedThreadPool(2)) {
             executor.submit(server::start);
