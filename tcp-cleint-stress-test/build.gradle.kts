@@ -4,17 +4,16 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":tcp-server"))
     implementation("ch.qos.logback:logback-classic")
 }
 
 tasks {
     named<ShadowJar>("shadowJar") {
-        archiveBaseName.set("tcpServerDemo")
+        archiveBaseName.set("stressClient")
         archiveVersion.set(project.version.toString())
         archiveClassifier.set("")
         manifest {
-            attributes(mapOf("Main-Class" to "ru.tcp.demo.TcpServerDemo"))
+            attributes(mapOf("Main-Class" to "ru.tcp.StressClient"))
         }
     }
 

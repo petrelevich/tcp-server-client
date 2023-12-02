@@ -29,6 +29,8 @@ public class Server {
 
     private final int port;
     private final InetAddress addr;
+    private long messagesFromClientsCounter;
+    private long bytesFromClientsCounter;
 
     private final Map<SocketAddress, SocketChannel> clients = new HashMap<>();
     private final Queue<SocketAddress> connectedClientsEvents = new ConcurrentLinkedQueue<>();
@@ -134,6 +136,10 @@ public class Server {
                 logger.error("clientChannel:{}, closing error:{}", clientAddress, e.getMessage(), e);
             }
         }
+        logger.debug(
+                "messagesFromClientsCounter:{}, bytesFromClientsCounter:{}",
+                messagesFromClientsCounter,
+                bytesFromClientsCounter);
         disConnectedClientsEvents.add(clientAddress);
     }
 
@@ -142,9 +148,11 @@ public class Server {
         logger.debug("{}. read from client", socketChannel);
 
         var data = readRequest(socketChannel);
+        bytesFromClientsCounter += data.length;
         if (data.length == 0) {
             disconnect(getSocketAddress(socketChannel));
         } else {
+            messagesFromClientsCounter++;
             messagesFromClients.add(new MessageFromClient(getSocketAddress(socketChannel), data));
         }
     }

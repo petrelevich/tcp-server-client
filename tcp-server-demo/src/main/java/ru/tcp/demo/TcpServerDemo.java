@@ -7,9 +7,17 @@ import org.slf4j.LoggerFactory;
 import ru.tcp.Server;
 
 public class TcpServerDemo {
-    private final Logger logger = LoggerFactory.getLogger(TcpServerDemo.class);
+    private static final Logger logger = LoggerFactory.getLogger(TcpServerDemo.class);
 
     public static void main(String[] args) {
+        com.sun.management.OperatingSystemMXBean os = (com.sun.management.OperatingSystemMXBean)
+                java.lang.management.ManagementFactory.getOperatingSystemMXBean();
+
+        logger.info("availableProcessors:{}", Runtime.getRuntime().availableProcessors());
+        logger.info("TotalMemorySize, mb:{}", os.getTotalMemorySize() / 1024 / 1024);
+        logger.info("maxMemory, mb:{}", Runtime.getRuntime().maxMemory() / 1024 / 1024);
+        logger.info("freeMemory, mb:{}", Runtime.getRuntime().freeMemory() / 1024 / 1024);
+
         new TcpServerDemo().run();
     }
 
@@ -51,8 +59,11 @@ public class TcpServerDemo {
     private void handleClientMessages(Server server) {
         var messageFromClient = server.getMessagesFromClients().poll();
         if (messageFromClient != null) {
-            String messageAsString = new String(messageFromClient.message(), StandardCharsets.UTF_8);
-            logger.info("from:{}, message:{}", messageFromClient.clientAddress(), messageAsString);
+            var messageAsString = new String(messageFromClient.message(), StandardCharsets.UTF_8);
+            logger.info("from:{}, message.length:{}", messageFromClient.clientAddress(), messageAsString.length());
+            if (messageAsString.contains("stop")) {
+                server.send(messageFromClient.clientAddress(), "ok".getBytes(StandardCharsets.UTF_8));
+            }
         }
     }
 }
