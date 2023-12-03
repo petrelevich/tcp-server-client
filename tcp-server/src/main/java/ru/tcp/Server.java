@@ -1,6 +1,7 @@
 package ru.tcp;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -21,12 +22,14 @@ import org.slf4j.LoggerFactory;
 import ru.tcp.model.MessageForClient;
 import ru.tcp.model.MessageFromClient;
 
+@SuppressWarnings("java:S1191")
 public class Server {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
     private static final int TIME_OUT_MS = 500;
 
+    private final sun.misc.Unsafe unsafe;
     private final int port;
     private final InetAddress addr;
     private long messagesFromClientsCounter;
@@ -38,11 +41,25 @@ public class Server {
     private final Queue<MessageForClient> messagesForClients = new ArrayBlockingQueue<>(1000);
     private final Queue<MessageFromClient> messagesFromClients = new ArrayBlockingQueue<>(1000);
 
+    private static final int RESULT_LIMIT = 102400;
+    private final ByteBuffer buffer = ByteBuffer.allocate(1024);
+
+    private final List<ByteBuffer> parts = new ArrayList<>();
+
     public Server(int port) {
         this(null, port);
     }
 
+    @SuppressWarnings("java:S3011")
     public Server(InetAddress addr, int port) {
+        try {
+            Constructor<sun.misc.Unsafe> unsafeConstructor = sun.misc.Unsafe.class.getDeclaredConstructor();
+            unsafeConstructor.setAccessible(true);
+            unsafe = unsafeConstructor.newInstance();
+        } catch (Exception ex) {
+            throw new TcpServerException(ex);
+        }
+
         logger.debug("addr:{}, port:{}", addr, port);
         this.addr = addr;
         this.port = port;
@@ -88,12 +105,12 @@ public class Server {
         try {
             selector.select(this::performIO, TIME_OUT_MS);
             sendMessagesToClients();
-        } catch (IOException ex) {
-            logger.error("unexpected error:{}", ex.getMessage(), ex);
         } catch (ClientCommunicationException ex) {
             var clintAddress = getSocketAddress(ex.getSocketChannel());
             logger.error("error in client communication:{}", clintAddress, ex);
             disconnect(clintAddress);
+        } catch (Exception ex) {
+            logger.error("unexpected error:{}", ex.getMessage(), ex);
         }
     }
 
@@ -167,18 +184,26 @@ public class Server {
 
     private byte[] readRequest(SocketChannel socketChannel) {
         try {
-            List<byte[]> parts = new ArrayList<>();
-            var buffer = ByteBuffer.allocate(2);
+            int usedIdx = 0;
             int readBytesTotal = 0;
             int readBytes;
-            while ((readBytes = socketChannel.read(buffer)) > 0) {
+            while (readBytesTotal < RESULT_LIMIT && (readBytes = socketChannel.read(buffer)) > 0) {
                 buffer.flip();
-                parts.add(new byte[readBytes]);
-                buffer.get(parts.getLast(), 0, readBytes);
+                if (usedIdx >= parts.size()) {
+                    parts.add(ByteBuffer.allocateDirect(readBytes));
+                }
+
+                if (parts.get(usedIdx).capacity() < readBytes) {
+                    unsafe.invokeCleaner(parts.get(usedIdx));
+                    parts.add(usedIdx, ByteBuffer.allocateDirect(readBytes));
+                }
+
+                parts.get(usedIdx).put(buffer);
                 buffer.flip();
                 readBytesTotal += readBytes;
+                usedIdx++;
             }
-            logger.debug("read bytes:{}", readBytesTotal);
+            logger.debug("read bytes:{}, usedIdx:{}", readBytesTotal, usedIdx);
 
             if (readBytesTotal == 0) {
                 return EMPTY_ARRAY;
@@ -186,9 +211,12 @@ public class Server {
             var result = new byte[readBytesTotal];
             var resultIdx = 0;
 
-            for (var part : parts) {
-                System.arraycopy(part, 0, result, resultIdx, part.length);
-                resultIdx += part.length;
+            for (var idx = 0; idx < usedIdx; idx++) {
+                var part = parts.get(idx);
+                part.flip();
+                part.get(result, resultIdx, part.limit());
+                resultIdx += part.limit();
+                part.flip();
             }
             return result;
         } catch (Exception ex) {
@@ -210,11 +238,11 @@ public class Server {
 
     private void write(SocketChannel clientChannel, byte[] data) {
         logger.debug("write to client:{}, data.length:{}", clientChannel, data.length);
-        var buffer = ByteBuffer.allocate(data.length);
-        buffer.put(data);
-        buffer.flip();
+        var bufferForWrite = ByteBuffer.allocate(data.length);
+        bufferForWrite.put(data);
+        bufferForWrite.flip();
         try {
-            clientChannel.write(buffer);
+            clientChannel.write(bufferForWrite);
         } catch (Exception ex) {
             throw new ClientCommunicationException("Write to the client error", ex, clientChannel);
         }

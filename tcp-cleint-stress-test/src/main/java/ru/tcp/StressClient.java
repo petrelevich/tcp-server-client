@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 public class StressClient {
     private static final Logger log = LoggerFactory.getLogger(StressClient.class);
     private static final int REQUEST_COUNTER_LIMIT = 100_000;
+    private static final int WORK_LIMIT = 30;
     private static final byte[] DATA = new byte[1024];
 
     public static void main(String[] args) throws InterruptedException {
@@ -28,9 +29,10 @@ public class StressClient {
                 log.info("scheduled:{}", idx);
             }
             executor.shutdown();
-            var result = executor.awaitTermination(1, TimeUnit.MINUTES);
+            var result = executor.awaitTermination(WORK_LIMIT, TimeUnit.MINUTES);
             if (!result) {
                 log.error("timeout elapsed before termination");
+                executor.shutdownNow();
             }
             var end = Instant.now();
             log.info("end:{}, spend:{}", end, ChronoUnit.SECONDS.between(begin, end));

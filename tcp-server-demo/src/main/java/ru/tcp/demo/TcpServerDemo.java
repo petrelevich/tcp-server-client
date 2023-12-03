@@ -1,6 +1,9 @@
 package ru.tcp.demo;
 
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +27,7 @@ public class TcpServerDemo {
     private void run() {
         var server = new Server(8081);
 
-        try (var executor = Executors.newFixedThreadPool(2)) {
+        try (var executor = Executors.newFixedThreadPool(3)) {
             executor.submit(server::start);
 
             executor.submit(() -> {
@@ -32,10 +35,15 @@ public class TcpServerDemo {
                     try {
                         handleConnectedClientsEvents(server);
                         handleDisConnectedClientsEvents(server);
-                        handleClientMessages(server);
                     } catch (Exception ex) {
                         logger.error("error:{}", ex.getMessage());
                     }
+                }
+            });
+
+            executor.submit(() -> {
+                while (!Thread.currentThread().isInterrupted()) {
+                    handleClientMessages(server);
                 }
             });
         }
@@ -56,13 +64,28 @@ public class TcpServerDemo {
         }
     }
 
+    private final Map<SocketAddress, StringBuilder> messages = new HashMap<>();
+
     private void handleClientMessages(Server server) {
         var messageFromClient = server.getMessagesFromClients().poll();
         if (messageFromClient != null) {
+            var clientAddress = messageFromClient.clientAddress();
+
             var messageAsString = new String(messageFromClient.message(), StandardCharsets.UTF_8);
-            logger.info("from:{}, message.length:{}", messageFromClient.clientAddress(), messageAsString.length());
-            if (messageAsString.contains("stop")) {
-                server.send(messageFromClient.clientAddress(), "ok".getBytes(StandardCharsets.UTF_8));
+            logger.info("from:{}, message.length:{}", clientAddress, messageAsString.length());
+
+            if (messageAsString.contains("s")
+                    || messageAsString.contains("t")
+                    || messageAsString.contains("o")
+                    || messageAsString.contains("p")) {
+                messages.putIfAbsent(clientAddress, new StringBuilder());
+                messages.get(clientAddress).append(messageAsString);
+
+                if (messages.get(clientAddress).toString().contains("stop")) {
+                    server.send(clientAddress, "ok".getBytes(StandardCharsets.UTF_8));
+                    logger.info("done:{}", clientAddress);
+                    messages.remove(clientAddress);
+                }
             }
         }
     }
