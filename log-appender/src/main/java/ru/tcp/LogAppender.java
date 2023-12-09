@@ -46,8 +46,16 @@ public class LogAppender extends UnsynchronizedAppenderBase<LoggingEvent> {
             addError(String.format(MESSAGE_TEMPLATE, "serverPort is null"));
             return;
         }
+        var messageEncoder = new MessageEncoderBase();
+        var connectionParameters = new ConnectionParameters(serverHost, serverPort);
+        var networkClient = new NetworkClient(connectionParameters, messageEncoder);
+        try {
+            networkClient.connect();
+        } catch (Exception ex) {
+            addError(ex.getMessage());
+        }
 
-        senderThread = Thread.ofVirtual().name("senderThread").start(this::sendMessages);
+        senderThread = Thread.ofVirtual().name("senderThread").start(() -> sendMessages(networkClient));
         super.start();
         addInfo(String.format(MESSAGE_TEMPLATE, "started"));
     }
@@ -67,15 +75,7 @@ public class LogAppender extends UnsynchronizedAppenderBase<LoggingEvent> {
         }
     }
 
-    private void sendMessages() {
-        var messageEncoder = new MessageEncoderBase();
-        var connectionParameters = new ConnectionParameters(serverHost, serverPort);
-        var networkClient = new NetworkClient(connectionParameters, messageEncoder);
-        try {
-            networkClient.connect();
-        } catch (Exception ex) {
-            addError(ex.getMessage());
-        }
+    private void sendMessages(NetworkClient networkClient) {
         while (!Thread.currentThread().isInterrupted()) {
             var event = eventsQueue.poll();
             if (event != null) {
