@@ -47,6 +47,9 @@ allprojects {
             force("org.sonarsource.analyzer-commons:sonar-analyzer-commons:2.3.0.1263")
             force("com.google.code.findbugs:jsr305:3.0.2")
             force("org.sonarsource.sslr:sslr-core:1.24.0.633")
+            force("org.eclipse.platform:org.eclipse.core.runtime:3.30.0")
+            force("org.eclipse.platform:org.eclipse.equinox.common:3.18.200")
+            force("org.eclipse.platform:org.eclipse.equinox.preferences:3.10.400")
         }
     }
 }
@@ -77,8 +80,8 @@ subprojects {
         nonQualifierBranches("main,master")
         tagVersionPattern("\${v}\${<meta.DIRTY_TEXT}")
         versionPattern(
-            "\${v}\${<meta.COMMIT_DISTANCE}\${<meta.GIT_SHA1_8}" +
-                    "\${<meta.QUALIFIED_BRANCH_NAME}\${<meta.DIRTY_TEXT}-SNAPSHOT"
+                "\${v}\${<meta.COMMIT_DISTANCE}\${<meta.GIT_SHA1_8}" +
+                        "\${<meta.QUALIFIED_BRANCH_NAME}\${<meta.DIRTY_TEXT}-SNAPSHOT"
         )
     }
 
@@ -96,10 +99,10 @@ tasks {
     val managedVersions by registering {
         doLast {
             project.extensions.getByType<DependencyManagementExtension>()
-                .managedVersions
-                .toSortedMap()
-                .map { "${it.key}:${it.value}" }
-                .forEach(::println)
+                    .managedVersions
+                    .toSortedMap()
+                    .map { "${it.key}:${it.value}" }
+                    .forEach(::println)
         }
     }
 }

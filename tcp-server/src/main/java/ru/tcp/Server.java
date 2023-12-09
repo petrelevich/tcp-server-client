@@ -27,7 +27,7 @@ public class Server {
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
-    private static final int TIME_OUT_MS = 500;
+    private static final int TIME_OUT_MS = 100;
 
     private final sun.misc.Unsafe unsafe;
     private final int port;
@@ -45,6 +45,7 @@ public class Server {
     private final ByteBuffer buffer = ByteBuffer.allocate(1024);
 
     private final List<ByteBuffer> parts = new ArrayList<>();
+    private volatile boolean run = true;
 
     public Server(int port) {
         this(null, port);
@@ -65,6 +66,7 @@ public class Server {
         this.port = port;
     }
 
+    @SuppressWarnings("java:S2139")
     public void start() {
         try {
             try (var serverSocketChannel = ServerSocketChannel.open()) {
@@ -73,14 +75,22 @@ public class Server {
                 serverSocket.bind(new InetSocketAddress(addr, port));
                 try (var selector = Selector.open()) {
                     serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-                    while (!Thread.currentThread().isInterrupted()) {
+                    logger.info("server started. addr:{}, port:{}", addr, port);
+                    while (run) {
                         handleSelector(selector);
                     }
+                    logger.info("server stopped. addr:{}, port:{}", addr, port);
                 }
             }
         } catch (Exception ex) {
+            logger.error("error. addr:{}, port:{}", addr, port, ex);
             throw new TcpServerException(ex);
         }
+    }
+
+    public void stop() {
+        logger.info("stop command received. addr:{}, port:{}", addr, port);
+        run = false;
     }
 
     public Queue<SocketAddress> getConnectedClientsEvents() {

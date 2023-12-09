@@ -1,0 +1,27 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>log-${bySecond}.txt</file>
+        <encoder>
+            <pattern>%logger{35} -%kvp- %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="tcp" class="ru.tcp.LogAppender">
+        <serverHost>localhost</serverHost>
+        <serverPort>9090</serverPort>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="trace">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="tcp" />
+    </root>
+</configuration>

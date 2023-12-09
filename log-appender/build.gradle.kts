@@ -9,12 +9,9 @@ dependencies {
 
 tasks {
     named<ShadowJar>("shadowJar") {
-        archiveBaseName.set("stressClient")
+        archiveBaseName.set("logAppender")
         archiveVersion.set(project.version.toString())
         archiveClassifier.set("")
-        manifest {
-            attributes(mapOf("Main-Class" to "ru.tcp.StressClient"))
-        }
     }
 
     build {
