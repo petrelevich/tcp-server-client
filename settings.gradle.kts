@@ -5,7 +5,10 @@ include("tcp-client")
 include("tcp-server-blocked-demo")
 include("tcp-server")
 include("tcp-server-demo")
-include("tcp-cleint-stress-test")
+include("tcp-client-stress-test")
+include("log-server")
+include("log-appender")
+include("log-appender-demo")
 
 pluginManagement {
     val jgitver: String by settings
