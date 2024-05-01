@@ -14,11 +14,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import ru.tcp.model.MessageForClient;
 import ru.tcp.model.MessageFromClient;
 
@@ -36,10 +38,10 @@ public class Server {
     private long bytesFromClientsCounter;
 
     private final Map<SocketAddress, SocketChannel> clients = new HashMap<>();
-    private final Queue<SocketAddress> connectedClientsEvents = new ConcurrentLinkedQueue<>();
-    private final Queue<SocketAddress> disConnectedClientsEvents = new ConcurrentLinkedQueue<>();
-    private final Queue<MessageForClient> messagesForClients = new ArrayBlockingQueue<>(1000);
-    private final Queue<MessageFromClient> messagesFromClients = new ArrayBlockingQueue<>(1000);
+    private final BlockingQueue<SocketAddress> connectedClientsEvents = new LinkedBlockingQueue<>();
+    private final BlockingQueue<SocketAddress> disConnectedClientsEvents = new LinkedBlockingQueue<>();
+    private final BlockingQueue<MessageForClient> messagesForClients = new ArrayBlockingQueue<>(1000);
+    private final BlockingQueue<MessageFromClient> messagesFromClients = new ArrayBlockingQueue<>(1000);
 
     private static final int RESULT_LIMIT = 102400;
     private final ByteBuffer buffer = ByteBuffer.allocate(1024);
@@ -93,15 +95,15 @@ public class Server {
         run = false;
     }
 
-    public Queue<SocketAddress> getConnectedClientsEvents() {
+    public BlockingQueue<SocketAddress> getConnectedClientsEvents() {
         return connectedClientsEvents;
     }
 
-    public Queue<SocketAddress> getDisConnectedClientsEvents() {
+    public BlockingQueue<SocketAddress> getDisConnectedClientsEvents() {
         return disConnectedClientsEvents;
     }
 
-    public Queue<MessageFromClient> getMessagesFromClients() {
+    public BlockingQueue<MessageFromClient> getMessagesFromClients() {
         return messagesFromClients;
     }
 
@@ -125,7 +127,7 @@ public class Server {
     }
 
     private void performIO(SelectionKey selectedKey) {
-        if (selectedKey.isAcceptable()) {
+    	if (selectedKey.isAcceptable()) {
             acceptConnection(selectedKey);
         } else if (selectedKey.isReadable()) {
             readFromClient(selectedKey);
@@ -144,7 +146,12 @@ public class Server {
                     clientSocketChannel);
 
             clientSocketChannel.configureBlocking(false);
-            clientSocketChannel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+            
+            if (messagesForClients.isEmpty()) {
+            	clientSocketChannel.register(selector, SelectionKey.OP_READ);
+            } else {
+            	clientSocketChannel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+            }
 
             var remoteAddress = clientSocketChannel.getRemoteAddress();
             clients.put(remoteAddress, clientSocketChannel);

@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.tcp.Server;
@@ -43,22 +44,26 @@ public class TcpServerDemo {
 
             executor.submit(() -> {
                 while (!Thread.currentThread().isInterrupted()) {
-                    handleClientMessages(server);
+                    try {
+						handleClientMessages(server);
+					} catch (InterruptedException ex) {
+                        logger.error("error:{}", ex.getMessage());
+					}
                 }
             });
         }
     }
 
-    private void handleConnectedClientsEvents(Server server) {
-        var newClient = server.getConnectedClientsEvents().poll();
+    private void handleConnectedClientsEvents(Server server) throws InterruptedException {
+        var newClient = server.getConnectedClientsEvents().poll(200, TimeUnit.MILLISECONDS);
         if (newClient != null) {
             var res = server.send(newClient, "hello".getBytes(StandardCharsets.UTF_8));
             logger.info("sending result:{}", res);
         }
     }
 
-    private void handleDisConnectedClientsEvents(Server server) {
-        var disconnectedClient = server.getDisConnectedClientsEvents().poll();
+    private void handleDisConnectedClientsEvents(Server server) throws InterruptedException {
+        var disconnectedClient = server.getDisConnectedClientsEvents().poll(200, TimeUnit.MILLISECONDS);
         if (disconnectedClient != null) {
             logger.info("disconnectedClient:{}", disconnectedClient);
         }
@@ -66,13 +71,13 @@ public class TcpServerDemo {
 
     private final Map<SocketAddress, StringBuilder> messages = new HashMap<>();
 
-    private void handleClientMessages(Server server) {
-        var messageFromClient = server.getMessagesFromClients().poll();
+    private void handleClientMessages(Server server) throws InterruptedException {
+        var messageFromClient = server.getMessagesFromClients().poll(200, TimeUnit.MILLISECONDS);
         if (messageFromClient != null) {
             var clientAddress = messageFromClient.clientAddress();
 
             var messageAsString = new String(messageFromClient.message(), StandardCharsets.UTF_8);
-            logger.info("from:{}, message.length:{}", clientAddress, messageAsString.length());
+            logger.info("from:{}, message.length:{}, message.text:{}", clientAddress, messageAsString.length(), messageAsString);
 
             if (messageAsString.contains("s")
                     || messageAsString.contains("t")
