@@ -23,7 +23,7 @@ public class MsgParserSm implements MsgParser {
     private final Map<SocketAddress, ParserState> messagesMsgState = new ConcurrentHashMap<>();
 
     @Override
-    @SuppressWarnings("java:S3776")
+    @SuppressWarnings({"java:S3776", "java:S6541"})
     public List<byte[]> parseMessage(SocketAddress clientAddress, byte[] message) {
         var parsedMsgs = new ArrayList<byte[]>();
         byte[] messageForProcess = message;

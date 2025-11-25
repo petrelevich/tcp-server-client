@@ -28,7 +28,7 @@ public class TcpServerDemo {
         var server = new Server(8081);
 
         try (var executor = Executors.newFixedThreadPool(3)) {
-            executor.submit(server::start);
+            executor.execute(server::start);
 
             executor.submit(() -> {
                 while (!Thread.currentThread().isInterrupted()) {

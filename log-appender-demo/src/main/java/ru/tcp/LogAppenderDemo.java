@@ -1,7 +1,7 @@
 package ru.tcp;
 
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.core.util.StatusPrinter;
+import ch.qos.logback.core.util.StatusPrinter2;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +23,6 @@ public class LogAppenderDemo {
 
         System.out.println("events");
         LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
-        StatusPrinter.print(lc);
+        new StatusPrinter2().print(lc);
     }
 }
