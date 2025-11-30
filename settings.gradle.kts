@@ -9,6 +9,7 @@ include("tcp-client-stress-test")
 include("log-server")
 include("log-appender")
 include("log-appender-demo")
+include("hw-server")
 
 pluginManagement {
     plugins {
