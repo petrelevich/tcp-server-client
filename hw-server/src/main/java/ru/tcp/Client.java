@@ -19,7 +19,7 @@ public class Client {
     private static final int CLIENT_NUMBER = 15;
 
     public static void main(String[] args) {
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        try (var executor = Executors.newFixedThreadPool(CLIENT_NUMBER)) {
             var counter = new AtomicInteger(0);
             var latch = new CountDownLatch(CLIENT_NUMBER);
             for (var idx = 0; idx < CLIENT_NUMBER; idx++) {
